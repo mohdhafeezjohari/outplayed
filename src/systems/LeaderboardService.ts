@@ -84,24 +84,51 @@ export const LeaderboardService = {
     }
   },
 
-  async fetchTop(limit = 10): Promise<{ entries: LeaderboardEntry[]; source: 'global' | 'local' }> {
+  async fetchTop(limit = 10): Promise<{
+    entries: LeaderboardEntry[];
+    source: 'global' | 'local';
+    /** Server has KV linked (even if the global list is still empty). */
+    serverOnline?: boolean;
+  }> {
     const local = sortEntries(readLocal());
 
     try {
       const res = await fetch(`/api/leaderboard?limit=${limit}`, { method: 'GET' });
-      if (res.ok) {
-        const data = (await res.json()) as { entries?: LeaderboardEntry[] };
-        if (Array.isArray(data.entries) && data.entries.length > 0) {
-          // Merge remote + local so your own device scores still show if API is empty/partial
-          let merged = [...data.entries];
-          for (const e of local) merged = upsert(merged, e);
-          return { entries: sortEntries(merged).slice(0, limit), source: 'global' };
-        }
+      const contentType = res.headers.get('content-type') ?? '';
+      if (!res.ok || !contentType.includes('application/json')) {
+        return { entries: local.slice(0, limit), source: 'local', serverOnline: false };
       }
-    } catch {
-      // fall through to local
-    }
 
-    return { entries: local.slice(0, limit), source: 'local' };
+      const data = (await res.json()) as {
+        entries?: LeaderboardEntry[];
+        persistent?: boolean;
+      };
+
+      // KV connected on Vercel → global board (empty store is still global).
+      if (data.persistent) {
+        let merged = Array.isArray(data.entries) ? [...data.entries] : [];
+        for (const e of local) merged = upsert(merged, e);
+        return {
+          entries: sortEntries(merged).slice(0, limit),
+          source: 'global',
+          serverOnline: true,
+        };
+      }
+
+      // API reachable but KV not linked on the deployment.
+      if (Array.isArray(data.entries) && data.entries.length > 0) {
+        let merged = [...data.entries];
+        for (const e of local) merged = upsert(merged, e);
+        return { entries: sortEntries(merged).slice(0, limit), source: 'local', serverOnline: true };
+      }
+
+      return {
+        entries: local.slice(0, limit),
+        source: 'local',
+        serverOnline: true,
+      };
+    } catch {
+      return { entries: local.slice(0, limit), source: 'local', serverOnline: false };
+    }
   },
 };

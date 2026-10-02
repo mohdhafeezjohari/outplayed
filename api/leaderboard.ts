@@ -29,8 +29,13 @@ function cors(res: VercelResponse): void {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
+/** Native Vercel KV or Upstash Redis linked to the project. */
 function hasKv(): boolean {
-  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  const vercelKv = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  const upstash = !!(
+    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  );
+  return vercelKv || upstash;
 }
 
 async function loadAll(): Promise<LeaderboardEntry[]> {

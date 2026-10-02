@@ -74,12 +74,14 @@ export class LeaderboardScene extends Phaser.Scene {
   }
 
   private async loadBoard(status: Phaser.GameObjects.Text): Promise<void> {
-    const { entries, source } = await LeaderboardService.fetchTop(10);
-    status.setText(
-      source === 'global'
-        ? 'GLOBAL  ·  BEST SCORE PER PLAYER'
-        : 'THIS DEVICE  ·  connect Vercel KV for a shared board',
-    );
+    const { entries, source, serverOnline } = await LeaderboardService.fetchTop(10);
+    if (source === 'global') {
+      status.setText('GLOBAL  ·  BEST SCORE PER PLAYER');
+    } else if (serverOnline === false) {
+      status.setText('THIS DEVICE  ·  API unreachable (check deploy / play on Vercel URL)');
+    } else {
+      status.setText('THIS DEVICE  ·  link KV to this project, then redeploy Production');
+    }
 
     if (entries.length === 0) {
       this.add
