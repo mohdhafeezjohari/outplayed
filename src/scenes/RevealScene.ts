@@ -64,6 +64,7 @@ export class RevealScene extends Phaser.Scene {
     this.backdrop = new Backdrop(this);
     this.cameras.main.fadeIn(600, 5, 6, 11);
     SoundFX.reveal();
+    SoundFX.startBgm('reveal');
 
     this.buildVignette();
     this.buildTitle();
@@ -372,6 +373,7 @@ export class RevealScene extends Phaser.Scene {
   private go(scene: string, resetMemory: boolean): void {
     if (this.leaving || this.time.now < this.readyAt) return;
     this.leaving = true;
+    SoundFX.ui();
     this.cameras.main.fadeOut(250, 5, 6, 11, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress === 1) {
         if (resetMemory) resetAIDirector(this.game);

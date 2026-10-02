@@ -102,7 +102,7 @@ export class HUD {
       .text(
         WIDTH / 2,
         HEIGHT - 22,
-        'A/D or ←/→ move   ·   SPACE / W / ↑ jump   ·   P pause   ·   F1 AI debug',
+        'A/D or ←/→ move   ·   SPACE jump   ·   P pause   ·   N mute   ·   F1 AI debug',
         {
           fontFamily: FONT,
           fontSize: '12px',

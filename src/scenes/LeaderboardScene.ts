@@ -3,6 +3,7 @@ import { GAME_CONFIG, SCENES } from '../config/gameConfig';
 import { Backdrop } from '../ui/Backdrop';
 import { LeaderboardService, type LeaderboardEntry } from '../systems/LeaderboardService';
 import { ScoreManager } from '../systems/ScoreManager';
+import { SoundFX } from '../utils/SoundFX';
 
 const { COLORS, FONT, WIDTH, HEIGHT } = GAME_CONFIG;
 const INPUT_DELAY_MS = 300;
@@ -24,6 +25,7 @@ export class LeaderboardScene extends Phaser.Scene {
     this.readyAt = this.time.now + INPUT_DELAY_MS;
     this.backdrop = new Backdrop(this);
     this.cameras.main.fadeIn(280, 5, 6, 11);
+    SoundFX.startBgm('menu');
 
     this.add
       .text(WIDTH / 2, 56, 'LEADERBOARD', {
@@ -130,6 +132,7 @@ export class LeaderboardScene extends Phaser.Scene {
   private goMenu(): void {
     if (this.leaving || this.time.now < this.readyAt) return;
     this.leaving = true;
+    SoundFX.ui();
     this.cameras.main.fadeOut(200, 5, 6, 11, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress === 1) this.scene.start(SCENES.MENU);
     });

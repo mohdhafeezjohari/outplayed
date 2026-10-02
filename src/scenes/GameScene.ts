@@ -49,6 +49,7 @@ export class GameScene extends Phaser.Scene {
   private pauseKey!: Phaser.Input.Keyboard.Key;
   private pauseKeyAlt!: Phaser.Input.Keyboard.Key;
   private debugKey!: Phaser.Input.Keyboard.Key;
+  private muteKey!: Phaser.Input.Keyboard.Key;
 
   /** Cooldown so avoidance does not spam every frame near spikes. */
   private avoidanceCooldownMs = 0;
@@ -88,6 +89,9 @@ export class GameScene extends Phaser.Scene {
     this.setupBehaviourListeners();
     this.syncAIHud();
 
+    void SoundFX.unlock();
+    SoundFX.startBgm('game');
+
     this.cameras.main.fadeIn(350, 5, 6, 11);
   }
 
@@ -97,6 +101,9 @@ export class GameScene extends Phaser.Scene {
 
     if (Phaser.Input.Keyboard.JustDown(this.pauseKey) || Phaser.Input.Keyboard.JustDown(this.pauseKeyAlt)) {
       this.setPaused(!this.paused);
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.muteKey)) {
+      SoundFX.toggleMute();
     }
     if (Phaser.Input.Keyboard.JustDown(this.debugKey)) {
       this.debugPanel.toggle();
@@ -156,10 +163,12 @@ export class GameScene extends Phaser.Scene {
 
   private onJump(payload: JumpPayload): void {
     this.director.onJump(payload);
+    SoundFX.jump();
   }
 
   private onLand(payload: LandPayload): void {
     this.director.onLand(payload);
+    if (payload.airTimeMs > 80) SoundFX.land();
   }
 
   private syncAIHud(): void {
@@ -290,11 +299,13 @@ export class GameScene extends Phaser.Scene {
     this.pauseKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.pauseKeyAlt = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.debugKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.F1);
+    this.muteKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.N);
   }
 
   private setPaused(paused: boolean): void {
     this.paused = paused;
     this.hud.setPaused(paused);
+    SoundFX.pause();
     if (paused) {
       this.physics.world.pause();
       this.tweens.pauseAll();
@@ -310,6 +321,7 @@ export class GameScene extends Phaser.Scene {
     shard.disableBody(true, true);
     this.score.addBonus(GAME_CONFIG.SCORE.SHARD);
     this.hud.popup(x, y - 10, `+${GAME_CONFIG.SCORE.SHARD}`);
+    SoundFX.collect();
 
     const burst = this.add.particles(x, y, TEXTURES.PARTICLE, {
       speed: { min: 50, max: 170 },
@@ -352,6 +364,7 @@ export class GameScene extends Phaser.Scene {
     this.ended = true;
     this.player.freeze();
     (this.player.body as Phaser.Physics.Arcade.Body).setVelocityX(0);
+    SoundFX.complete();
     this.cameras.main.flash(300, 124, 255, 178, false);
     this.time.delayedCall(700, () => this.finish({ completed: true, cause: 'Signal reached' }));
   }

@@ -3,6 +3,7 @@ import { GAME_CONFIG, SCENES, RunResult } from '../config/gameConfig';
 import { ScoreManager } from '../systems/ScoreManager';
 import { Backdrop } from '../ui/Backdrop';
 import { resetAIDirector } from '../ai/session';
+import { SoundFX } from '../utils/SoundFX';
 
 const { COLORS, FONT, WIDTH } = GAME_CONFIG;
 /** Ignore retry input briefly so a held key does not skip the screen. */
@@ -40,6 +41,8 @@ export class GameOverScene extends Phaser.Scene {
     this.readyAt = this.time.now + INPUT_DELAY_MS;
     this.backdrop = new Backdrop(this);
     this.cameras.main.fadeIn(300, 5, 6, 11);
+    SoundFX.startBgm('menu');
+    SoundFX.ui();
 
     const { completed, score, timeMs, cause } = this.result;
     const accent = completed ? '#7cffb2' : COLORS.UI_WARN;
@@ -166,6 +169,7 @@ export class GameOverScene extends Phaser.Scene {
   private go(scene: string, resetMemory = false): void {
     if (this.leaving || this.time.now < this.readyAt) return;
     this.leaving = true;
+    SoundFX.ui();
     this.cameras.main.fadeOut(200, 5, 6, 11, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress === 1) {
         // Returning to the menu wipes what the AI learned; retry keeps it.

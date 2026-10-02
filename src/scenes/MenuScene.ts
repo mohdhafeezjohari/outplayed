@@ -9,6 +9,7 @@ import {
   sanitizeUsername,
   USERNAME_RULES,
 } from '../player/identity';
+import { SoundFX } from '../utils/SoundFX';
 
 const { COLORS, FONT, WIDTH, HEIGHT } = GAME_CONFIG;
 
@@ -20,6 +21,7 @@ export class MenuScene extends Phaser.Scene {
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private enterKey!: Phaser.Input.Keyboard.Key;
   private leaderboardKey!: Phaser.Input.Keyboard.Key;
+  private muteKey!: Phaser.Input.Keyboard.Key;
 
   private username = '';
   private nameText!: Phaser.GameObjects.Text;
@@ -37,6 +39,9 @@ export class MenuScene extends Phaser.Scene {
     this.inputReady = false;
     this.username = getSavedUsername();
     this.backdrop = new Backdrop(this);
+
+    // Fresh session from the menu — restart menu BGM if returning here.
+    void SoundFX.unlock().then(() => SoundFX.startBgm('menu'));
 
     this.game.canvas.setAttribute('tabindex', '0');
     this.game.canvas.focus();
@@ -135,7 +140,7 @@ export class MenuScene extends Phaser.Scene {
     });
 
     this.add
-      .text(WIDTH / 2, HEIGHT - 58, 'TYPE NAME   ·   ENTER start   ·   L leaderboard', {
+      .text(WIDTH / 2, HEIGHT - 58, 'TYPE NAME   ·   ENTER start   ·   L board   ·   N mute', {
         fontFamily: FONT,
         fontSize: '13px',
         color: COLORS.UI_DIM,
@@ -160,8 +165,16 @@ export class MenuScene extends Phaser.Scene {
     this.spaceKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.enterKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
     this.leaderboardKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.L);
+    this.muteKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.N);
 
     kb.on('keydown', (event: KeyboardEvent) => this.onKey(event));
+
+    // Unlock audio on first gesture, then start menu BGM.
+    const unlockAudio = () => {
+      void SoundFX.unlock().then(() => SoundFX.startBgm('menu'));
+    };
+    this.input.once('pointerdown', unlockAudio);
+    kb.once('keydown', unlockAudio);
 
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => {
       this.inputReady = true;
@@ -177,6 +190,11 @@ export class MenuScene extends Phaser.Scene {
     this.drawEye(time);
 
     if (!this.inputReady || this.starting) return;
+
+    if (Phaser.Input.Keyboard.JustDown(this.muteKey)) {
+      SoundFX.toggleMute();
+      return;
+    }
 
     if (Phaser.Input.Keyboard.JustDown(this.leaderboardKey)) {
       this.openLeaderboard();
@@ -197,6 +215,7 @@ export class MenuScene extends Phaser.Scene {
     if (event.key === 'Backspace') {
       event.preventDefault();
       this.username = this.username.slice(0, -1);
+      SoundFX.type();
       this.refreshNameDisplay();
       this.refreshPrompt();
       return;
@@ -206,10 +225,12 @@ export class MenuScene extends Phaser.Scene {
       if (event.key === ' ') return;
       // L opens leaderboard once a valid callsign exists.
       if (event.key.toLowerCase() === 'l' && isValidUsername(this.username)) return;
+      if (event.key.toLowerCase() === 'n') return;
 
       const next = sanitizeUsername(this.username + event.key);
       if (next.length <= USERNAME_RULES.MAX_LEN && /^[A-Za-z0-9_\-]*$/.test(next)) {
         this.username = next;
+        SoundFX.type();
         this.refreshNameDisplay();
         this.refreshPrompt();
       }
@@ -252,6 +273,8 @@ export class MenuScene extends Phaser.Scene {
     saveUsername(this.username);
     this.registry.set('username', sanitizeUsername(this.username));
     resetAIDirector(this.game);
+    void SoundFX.unlock();
+    SoundFX.start();
 
     this.cameras.main.fadeOut(250, 5, 6, 11, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress === 1) this.scene.start(SCENES.GAME);
@@ -260,7 +283,7 @@ export class MenuScene extends Phaser.Scene {
 
   private openLeaderboard(): void {
     if (this.starting) return;
-    // If still typing an incomplete name, don't hijack — unless name already valid/empty intent
+    SoundFX.ui();
     this.cameras.main.fadeOut(200, 5, 6, 11, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress === 1) this.scene.start(SCENES.LEADERBOARD);
     });
