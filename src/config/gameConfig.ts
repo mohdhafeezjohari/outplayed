@@ -115,6 +115,7 @@ export const SCENES = {
   GAME: 'GameScene',
   GAME_OVER: 'GameOverScene',
   REVEAL: 'RevealScene',
+  LEADERBOARD: 'LeaderboardScene',
 } as const;
 
 /** Awareness tiers shown subtly in the HUD (LEVEL 0–4). */
@@ -149,6 +150,7 @@ export interface RunResult {
   timeMs: number;
   completed: boolean;
   cause: string;
+  username?: string;
   awareness?: number;
   aiState?: string;
   jumpRate?: number;

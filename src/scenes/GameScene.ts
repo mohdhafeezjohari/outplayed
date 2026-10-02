@@ -27,6 +27,8 @@ import {
   type LandPayload,
   type PlayerSamplePayload,
 } from '../events/GameEvents';
+import { LeaderboardService } from '../systems/LeaderboardService';
+import { getSavedUsername } from '../player/identity';
 
 /**
  * Stage 3 gameplay scene — Director adapts the level from observed behaviour.
@@ -357,9 +359,14 @@ export class GameScene extends Phaser.Scene {
   private finish(partial: Pick<RunResult, 'completed' | 'cause'>): void {
     const snap = this.director.getSnapshot();
     const p = snap.profile;
+    const username =
+      (this.registry.get('username') as string | undefined) ||
+      getSavedUsername();
+
     const result: RunResult = {
       score: this.score.score,
       timeMs: this.score.timeMs,
+      username,
       awareness: snap.awareness,
       aiState: snap.state,
       jumpRate: p.jumpRate,
@@ -374,6 +381,14 @@ export class GameScene extends Phaser.Scene {
       repetition: p.repeatedRoute ? 'HIGH' : p.predictability,
       ...partial,
     };
+
+    void LeaderboardService.submit({
+      username,
+      score: result.score,
+      timeMs: result.timeMs,
+      completed: result.completed,
+      awareness: result.awareness,
+    });
 
     // Completion always reveals; a death only reveals once the AI really knows you.
     const reveal = result.completed || snap.awareness >= 0.7;

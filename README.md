@@ -26,6 +26,16 @@ npm run preview    # serve the production build
    - **Install Command:** `npm install`
 4. Click **Deploy**.
 
+### Shared leaderboard (optional)
+
+Scores always save on the player's device. For a **global** board on Vercel:
+
+1. Vercel project → **Storage** → create **KV**
+2. Connect it to this project (adds `KV_REST_API_URL` / `KV_REST_API_TOKEN`)
+3. Redeploy
+
+Without KV, the in-game board still works as **this device** only.
+
 Or from the CLI:
 
 ```bash
@@ -34,8 +44,6 @@ vercel login
 vercel          # preview
 vercel --prod   # production
 ```
-
-`vercel.json` in the repo already sets build/output for this project.
 
 ## Deploy (Docker)
 

@@ -24,6 +24,7 @@ export class GameOverScene extends Phaser.Scene {
       timeMs: data.timeMs ?? 0,
       completed: data.completed ?? false,
       cause: data.cause ?? '',
+      username: data.username,
       awareness: data.awareness,
       aiState: data.aiState,
       jumpRate: data.jumpRate,
@@ -60,6 +61,16 @@ export class GameOverScene extends Phaser.Scene {
         color: COLORS.UI_DIM,
       })
       .setOrigin(0.5);
+
+    if (this.result.username) {
+      this.add
+        .text(WIDTH / 2, 172, this.result.username.toUpperCase(), {
+          fontFamily: FONT,
+          fontSize: '16px',
+          color: COLORS.UI_ACCENT,
+        })
+        .setOrigin(0.5);
+    }
 
     // score / time panel
     const panel = this.add.graphics();
@@ -118,7 +129,7 @@ export class GameOverScene extends Phaser.Scene {
     });
 
     this.add
-      .text(WIDTH / 2, 438, 'M  main menu (resets AI memory)', {
+      .text(WIDTH / 2, 438, 'M  menu (resets AI)   ·   L  leaderboard', {
         fontFamily: FONT,
         fontSize: '13px',
         color: COLORS.UI_DIM,
@@ -130,6 +141,7 @@ export class GameOverScene extends Phaser.Scene {
     kb?.on('keydown-SPACE', () => this.go(SCENES.GAME));
     kb?.on('keydown-ENTER', () => this.go(SCENES.GAME));
     kb?.on('keydown-M', () => this.go(SCENES.MENU, true));
+    kb?.on('keydown-L', () => this.go(SCENES.LEADERBOARD));
   }
 
   update(_time: number, delta: number): void {

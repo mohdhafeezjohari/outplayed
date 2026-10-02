@@ -51,6 +51,7 @@ export class RevealScene extends Phaser.Scene {
       adaptationCount: data.adaptationCount,
       riskTaking: data.riskTaking,
       repetition: data.repetition,
+      username: data.username,
     };
   }
 
@@ -82,6 +83,7 @@ export class RevealScene extends Phaser.Scene {
     kb?.on('keydown-SPACE', () => this.go(SCENES.GAME, false));
     kb?.on('keydown-ENTER', () => this.go(SCENES.GAME, false));
     kb?.on('keydown-M', () => this.go(SCENES.MENU, true));
+    kb?.on('keydown-L', () => this.go(SCENES.LEADERBOARD, false));
   }
 
   update(_time: number, delta: number): void {
@@ -120,6 +122,18 @@ export class RevealScene extends Phaser.Scene {
   }
 
   private buildTitle(): void {
+    // Type the title out, with a faint red ghost for a glitchy feel.
+    if (this.result.username) {
+      this.add
+        .text(WIDTH / 2, 28, this.result.username.toUpperCase(), {
+          fontFamily: FONT,
+          fontSize: '14px',
+          color: COLORS.UI_DIM,
+        })
+        .setOrigin(0.5)
+        .setDepth(10);
+    }
+
     const full = 'THE GAME HAS LEARNED YOU.';
     const title = this.add
       .text(WIDTH / 2, 56, '', {
@@ -344,7 +358,7 @@ export class RevealScene extends Phaser.Scene {
     });
 
     const menu = this.add
-      .text(WIDTH / 2, 498, 'M  main menu (resets AI memory)', {
+      .text(WIDTH / 2, 498, 'M  menu (resets AI)   ·   L  leaderboard', {
         fontFamily: FONT,
         fontSize: '13px',
         color: COLORS.UI_DIM,

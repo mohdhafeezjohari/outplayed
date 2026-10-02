@@ -5,6 +5,7 @@ import { MenuScene } from './scenes/MenuScene';
 import { GameScene } from './scenes/GameScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { RevealScene } from './scenes/RevealScene';
+import { LeaderboardScene } from './scenes/LeaderboardScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -27,7 +28,7 @@ const config: Phaser.Types.Core.GameConfig = {
     antialias: true,
     roundPixels: true,
   },
-  scene: [BootScene, MenuScene, GameScene, GameOverScene, RevealScene],
+  scene: [BootScene, MenuScene, GameScene, GameOverScene, RevealScene, LeaderboardScene],
 };
 
 const game = new Phaser.Game(config);
