@@ -80,9 +80,9 @@ export class LeaderboardScene extends Phaser.Scene {
     if (source === 'global') {
       status.setText('GLOBAL  ·  BEST SCORE PER PLAYER');
     } else if (serverOnline === false) {
-      status.setText('THIS DEVICE  ·  API unreachable (check deploy / play on Vercel URL)');
+      status.setText('THIS DEVICE  ·  API unreachable');
     } else {
-      status.setText('THIS DEVICE  ·  link KV to this project, then redeploy Production');
+      status.setText('THIS DEVICE  ·  open /api/leaderboard?diag=1 — Redis/KV not on Production');
     }
 
     if (entries.length === 0) {

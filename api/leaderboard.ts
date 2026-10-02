@@ -1,14 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { Redis } from '@upstash/redis';
 
 /**
- * Shared leaderboard API.
+ * Shared leaderboard API (global scores).
  *
- * Storage:
- *  - If Vercel KV env vars are present (`KV_REST_API_URL` + `KV_REST_API_TOKEN`),
- *    scores persist globally via @vercel/kv.
- *  - Otherwise returns/stores nothing durable (client still has localStorage).
+ * Needs ONE of these pairs on the Vercel project (Production):
+ *   KV_REST_API_URL + KV_REST_API_TOKEN          (Vercel KV)
+ *   UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN  (Marketplace Redis / Upstash)
  *
- * Setup on Vercel: Storage → Create KV → connect to this project.
+ * After connecting Storage → Redeploy Production.
+ * Check: GET /api/leaderboard?diag=1
  */
 
 export interface LeaderboardEntry {
@@ -29,26 +30,36 @@ function cors(res: VercelResponse): void {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
-/** Native Vercel KV or Upstash Redis linked to the project. */
-function hasKv(): boolean {
-  const vercelKv = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
-  const upstash = !!(
-    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-  );
-  return vercelKv || upstash;
+function redisUrl(): string | undefined {
+  return process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+}
+
+function redisToken(): string | undefined {
+  return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+}
+
+function hasStore(): boolean {
+  return !!(redisUrl() && redisToken());
+}
+
+function getRedis(): Redis | null {
+  const url = redisUrl();
+  const token = redisToken();
+  if (!url || !token) return null;
+  return new Redis({ url, token });
 }
 
 async function loadAll(): Promise<LeaderboardEntry[]> {
-  if (!hasKv()) return [];
-  const { kv } = await import('@vercel/kv');
-  const data = await kv.get<LeaderboardEntry[]>(KEY);
+  const redis = getRedis();
+  if (!redis) return [];
+  const data = await redis.get<LeaderboardEntry[]>(KEY);
   return Array.isArray(data) ? data : [];
 }
 
 async function saveAll(entries: LeaderboardEntry[]): Promise<void> {
-  if (!hasKv()) return;
-  const { kv } = await import('@vercel/kv');
-  await kv.set(KEY, entries.slice(0, MAX));
+  const redis = getRedis();
+  if (!redis) return;
+  await redis.set(KEY, entries.slice(0, MAX));
 }
 
 function sanitize(entry: Partial<LeaderboardEntry>): LeaderboardEntry | null {
@@ -82,11 +93,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === 'GET') {
+      // Safe diagnostics — no secrets, only whether vars exist.
+      if (req.query.diag === '1' || req.query.diag === 'true') {
+        return res.status(200).json({
+          persistent: hasStore(),
+          env: {
+            KV_REST_API_URL: !!process.env.KV_REST_API_URL,
+            KV_REST_API_TOKEN: !!process.env.KV_REST_API_TOKEN,
+            UPSTASH_REDIS_REST_URL: !!process.env.UPSTASH_REDIS_REST_URL,
+            UPSTASH_REDIS_REST_TOKEN: !!process.env.UPSTASH_REDIS_REST_TOKEN,
+          },
+          hint: hasStore()
+            ? 'Store linked. Leaderboard should show GLOBAL.'
+            : 'No Redis/KV env on this deployment. Storage → Connect to outplayed → Production → Redeploy.',
+        });
+      }
+
       const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
       const entries = sortEntries(await loadAll()).slice(0, limit);
       return res.status(200).json({
         entries,
-        persistent: hasKv(),
+        persistent: hasStore(),
       });
     }
 
@@ -94,8 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const entry = sanitize(typeof req.body === 'string' ? JSON.parse(req.body) : req.body);
       if (!entry) return res.status(400).json({ error: 'invalid entry' });
 
-      if (!hasKv()) {
-        // No KV linked — acknowledge so the client keeps its local copy.
+      if (!hasStore()) {
         return res.status(200).json({ ok: true, persistent: false, entry });
       }
 
@@ -112,6 +138,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'method not allowed' });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'server error' });
+    return res.status(500).json({
+      error: 'server error',
+      message: err instanceof Error ? err.message : 'unknown',
+    });
   }
 }
