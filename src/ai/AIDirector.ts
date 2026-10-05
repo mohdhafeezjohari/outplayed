@@ -87,7 +87,7 @@ export class AIDirector {
     this.tracker.beginRun();
     this.predictor.beginRun();
     this.lastSample = null;
-    this.cooldownMs = GAME_CONFIG.DEMO_MODE ? 600 : 4000;
+    this.cooldownMs = GAME_CONFIG.DEMO_MODE ? 400 : 3500;
     this.lastAdaptation = null;
     this.refreshDerived();
   }
@@ -177,10 +177,16 @@ export class AIDirector {
       this.predictor.lockPrediction(this.lastPrediction);
     }
 
-    const baseCd = this.difficulty.cooldownScale(this.awareness);
-    // Faster follow-ups once countering / predicting.
-    const scale = this.state === 'PREDICT' ? 0.7 : this.state === 'COUNTER' ? 0.85 : 1;
-    this.cooldownMs = baseCd * scale;
+    // Sprint-rushers get faster follow-ups so they cannot outrun the AI.
+    if (profile.sprintRush) {
+      this.cooldownMs = GAME_CONFIG.DEMO_MODE
+        ? GAME_CONFIG.AI.SPRINT_COOLDOWN_MS_DEMO
+        : GAME_CONFIG.AI.SPRINT_COOLDOWN_MS_NORMAL;
+    } else {
+      const baseCd = this.difficulty.cooldownScale(this.awareness);
+      const scale = this.state === 'PREDICT' ? 0.7 : this.state === 'COUNTER' ? 0.85 : 1;
+      this.cooldownMs = baseCd * scale;
+    }
 
     return decision;
   }
@@ -215,13 +221,17 @@ export class AIDirector {
     const timeFactor = Math.min(1, profile.observationMs / learnMs);
     const adaptFactor = Math.min(1, profile.observationMs / adaptMs);
 
+    // Sprint-rushers "reveal their hand" early — awareness climbs faster.
+    const sprintBoost = profile.sprintRush ? 0.18 : 0;
+
     this.awareness = Math.min(
       1,
       profile.confidence * 0.5 +
         timeFactor * 0.25 +
         adaptFactor * 0.15 +
         profile.predictabilityScore * 0.12 +
-        Math.min(0.15, this.adaptationCount * 0.03),
+        Math.min(0.15, this.adaptationCount * 0.03) +
+        sprintBoost,
     );
 
     this.state = this.resolveState(profile);
@@ -240,6 +250,9 @@ export class AIDirector {
   private resolveState(profile: BehaviourProfile): AIDirectorState {
     const { AI } = GAME_CONFIG;
     const adaptMs = GAME_CONFIG.DEMO_MODE ? AI.ADAPT_MS_DEMO : AI.ADAPT_MS_NORMAL;
+    const sprintForceMs = GAME_CONFIG.DEMO_MODE
+      ? AI.SPRINT_FORCE_ADAPT_MS_DEMO
+      : AI.SPRINT_FORCE_ADAPT_MS_NORMAL;
 
     if (
       this.awareness >= AI.PREDICT_AWARENESS &&
@@ -250,9 +263,16 @@ export class AIDirector {
     }
     if (
       this.awareness >= AI.COUNTER_AWARENESS &&
-      (profile.predictability === 'HIGH' || profile.repeatedJumpPattern || profile.repeatedRoute)
+      (profile.predictability === 'HIGH' ||
+        profile.repeatedJumpPattern ||
+        profile.repeatedRoute ||
+        profile.sprintRush)
     ) {
       return 'COUNTER';
+    }
+    // Never-stop forward play forces ADAPT early — still after a short observe window.
+    if (profile.sprintRush && profile.observationMs >= sprintForceMs) {
+      return this.awareness >= AI.COUNTER_AWARENESS ? 'COUNTER' : 'ADAPT';
     }
     if (this.awareness >= AI.ADAPT_AWARENESS || profile.observationMs >= adaptMs) {
       return 'ADAPT';
@@ -274,8 +294,10 @@ export class AIDirector {
         if (profile.idleTimeRatio > 0.2) return 'STUDYING HESITATION';
         return 'LEARNING YOU';
       case 'ADAPT':
+        if (profile.sprintRush) return 'BREAKING YOUR SPRINT';
         return 'ADAPTING TO YOU';
       case 'COUNTER':
+        if (profile.sprintRush) return 'COUNTER SPRINT RUSH';
         if (profile.jumpRate > 0.65) return 'COUNTER JUMPING';
         if (profile.rightMovementRatio > 0.7) return 'COUNTER RIGHT BIAS';
         if (profile.leftMovementRatio > 0.7) return 'COUNTER LEFT BIAS';
@@ -291,6 +313,7 @@ export class AIDirector {
   private deriveNextHint(profile: BehaviourProfile): string {
     if (this.state === 'OBSERVE') return 'COLLECTING DATA';
     if (this.state === 'LEARN') return 'PREPARING ADAPTATION';
+    if (profile.sprintRush) return 'SPRINT GATE AHEAD';
     if (profile.jumpRate > 0.7 || profile.repeatedJumpPattern || this.lastPrediction.likely === 'JUMP') {
       return 'OVERHEAD HAZARD';
     }
@@ -316,6 +339,8 @@ export class AIDirector {
         return 'FAKE SAFE PLATFORM';
       case 'route':
         return 'ROUTE ADAPTATION';
+      case 'sprint_gate':
+        return 'COUNTER SPRINT RUSH';
       case 'pressure':
         return 'PRESSURE';
       case 'enemy':

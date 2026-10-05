@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { GAME_CONFIG } from '../config/gameConfig';
 import type {
   AvoidancePayload,
   DeathPayload,
@@ -41,6 +42,11 @@ export interface BehaviourProfile {
   /** 0..1 confidence that we have enough samples to trust the profile. */
   confidence: number;
   observationMs: number;
+  /**
+   * True when the player almost always runs one way with almost no idle —
+   * the "never stop, always right" first-clear strategy.
+   */
+  sprintRush: boolean;
 }
 
 interface ActionStamp {
@@ -292,6 +298,13 @@ export class BehaviourTracker {
 
     const confidence = this.computeConfidence();
 
+    const sprintRush =
+      this.observationMs >= 2500 &&
+      ((rightMovementRatio >= GAME_CONFIG.AI.SPRINT_RIGHT_RATIO &&
+        idleTimeRatio <= GAME_CONFIG.AI.SPRINT_MAX_IDLE) ||
+        (leftMovementRatio >= GAME_CONFIG.AI.SPRINT_RIGHT_RATIO &&
+          idleTimeRatio <= GAME_CONFIG.AI.SPRINT_MAX_IDLE));
+
     return {
       jumpCount: this.jumpCount,
       jumpRate,
@@ -318,6 +331,7 @@ export class BehaviourTracker {
       predictabilityScore,
       confidence,
       observationMs: this.observationMs,
+      sprintRush,
     };
   }
 
@@ -406,6 +420,13 @@ export class BehaviourTracker {
     if (this.repeatsAfterDeath) score += 0.1;
     // Extreme idle is also predictable (stand still).
     if (args.idleTimeRatio > 0.25) score += 0.1;
+    // Never-stop one-way sprint is highly readable.
+    if (
+      args.idleTimeRatio <= GAME_CONFIG.AI.SPRINT_MAX_IDLE &&
+      Math.max(args.rightMovementRatio, args.leftMovementRatio) >= GAME_CONFIG.AI.SPRINT_RIGHT_RATIO
+    ) {
+      score += 0.22;
+    }
     return Phaser.Math.Clamp(score, 0, 1);
   }
 

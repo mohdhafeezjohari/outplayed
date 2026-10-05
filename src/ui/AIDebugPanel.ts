@@ -85,6 +85,7 @@ export class AIDebugPanel {
       `Preferred dir:   ${p.preferredDirection.toUpperCase()}`,
       `Predictability:  ${p.predictability}  (${pct(p.predictabilityScore)})`,
       `Route repeat:    ${p.repeatedRoute ? `YES ×${p.routeRepetitionCount}` : 'no'}`,
+      `Sprint rush:     ${p.sprintRush ? 'YES — never stop' : 'no'}`,
       `Jump pattern:    ${p.repeatedJumpPattern ? 'REPEATED' : 'varied'}`,
       `Deaths:          ${p.deaths}${p.repeatsAfterDeath ? '  (repeats after death)' : ''}`,
       `Avoidances:      ${p.avoidanceAttempts}`,

@@ -16,7 +16,8 @@ export type AdaptiveKind =
   | 'prediction'
   | 'enemy'
   | 'moving_platform'
-  | 'timed_hazard';
+  | 'timed_hazard'
+  | 'sprint_gate';
 
 interface LiveAdaptive {
   kind: AdaptiveKind;
@@ -251,6 +252,83 @@ export class SpawnManager {
       this.track(kind, [alt], 14_000);
     }
     return okSpikes;
+  }
+
+  /**
+   * Fair counter to "never stop, always go right":
+   * - Spikes placed well ahead so telegraph finishes before arrival
+   * - High alternate platform (must jump / change route)
+   * - Brief overhead so blind sprint-jumps also get checked
+   * Always avoidable; never spawned on the player.
+   */
+  spawnSprintGate(kind: AdaptiveKind, aheadX: number): boolean {
+    const t = GAME_CONFIG.TILE;
+    // Far enough that TELEGRAPH_MS elapses before a max-speed runner arrives.
+    const gateX = Math.round((aheadX + 80) / t) * t;
+    const spikeW = 2;
+    const groundY = GAME_CONFIG.LEVEL.GROUND_Y;
+    const spikeY = groundY - 20;
+    const w = spikeW * t;
+
+    if (!this.isSafeSpawn(gateX, spikeY, w, 20, GAME_CONFIG.AI.MIN_SPAWN_DISTANCE + 40)) {
+      return this.spawnRouteBlock(kind, aheadX);
+    }
+
+    const warn = this.scene.add
+      .rectangle(gateX + w / 2, spikeY + 10, w + 24, 36, GAME_CONFIG.COLORS.HAZARD, 0.28)
+      .setDepth(12);
+    this.scene.tweens.add({
+      targets: warn,
+      alpha: { from: 0.2, to: 0.65 },
+      duration: 160,
+      yoyo: true,
+      repeat: Math.floor(GAME_CONFIG.AI.TELEGRAPH_MS / 320),
+    });
+
+    const label = this.scene.add
+      .text(gateX + w / 2, spikeY - 28, 'PATH DENIED', {
+        fontFamily: GAME_CONFIG.FONT,
+        fontSize: '12px',
+        color: GAME_CONFIG.COLORS.UI_WARN,
+      })
+      .setOrigin(0.5)
+      .setDepth(13)
+      .setAlpha(0.9);
+    this.scene.tweens.add({ targets: label, alpha: 0, delay: 1400, duration: 400 });
+
+    const hazard = Hazard.atPixels(this.scene, this.adaptiveHazards, gateX, spikeY, w);
+    hazard.setAlpha(0.35);
+    hazard.setTint(0xff9bb0);
+    hazard.deadly = false;
+
+    this.scene.time.delayedCall(GAME_CONFIG.AI.TELEGRAPH_MS, () => {
+      if (!hazard.active) return;
+      hazard.deadly = true;
+      hazard.clearTint();
+      hazard.setAlpha(1);
+      warn.destroy();
+      this.pulse(gateX + w / 2, spikeY);
+    });
+
+    // Alternate high route past the gate.
+    const altX = Math.round((gateX + 64) / t) * t;
+    const altY = groundY - 128;
+    if (this.isSafeSpawn(altX, altY, 2 * t, 16, 120)) {
+      const alt = this.scene.add
+        .tileSprite(altX, altY, 2 * t, 16, TEXTURES.PLATFORM)
+        .setOrigin(0, 0)
+        .setDepth(2)
+        .setTint(0x4cf0ff);
+      this.scene.physics.add.existing(alt, true);
+      this.adaptiveSolids.add(alt);
+      this.track(kind, [alt], 14_000);
+    }
+
+    // Soft overhead over the landing so a blind jump-forward isn't free.
+    this.spawnOverheadTrap(kind, gateX + w + 40);
+
+    this.track(kind, [warn, label, hazard], 14_000);
+    return true;
   }
 
   spawnEnemy(kind: AdaptiveKind, aheadX: number, speed = 70): boolean {

@@ -18,25 +18,34 @@ export const GAME_CONFIG = {
     /** Time before awareness can fully enter LEARN (normal play). */
     LEARN_MS_NORMAL: 90_000,
     /** Time before awareness can fully enter LEARN (demo / pitch). */
-    LEARN_MS_DEMO: 8_000,
+    LEARN_MS_DEMO: 5_000,
     /** Awareness threshold that flips OBSERVE → LEARN. */
-    LEARN_AWARENESS: 0.28,
+    LEARN_AWARENESS: 0.22,
     /** Awareness / time gate before adaptive events may fire. */
-    ADAPT_MS_NORMAL: 75_000,
-    /** First blockers around ~10s in demo so the twist is obvious quickly. */
-    ADAPT_MS_DEMO: 10_000,
-    ADAPT_AWARENESS: 0.35,
-    COUNTER_AWARENESS: 0.55,
-    PREDICT_AWARENESS: 0.7,
+    ADAPT_MS_NORMAL: 60_000,
+    /** First blockers ~5s in demo so a pure sprint cannot clear before the AI wakes. */
+    ADAPT_MS_DEMO: 5_000,
+    ADAPT_AWARENESS: 0.28,
+    COUNTER_AWARENESS: 0.48,
+    PREDICT_AWARENESS: 0.65,
     /** Minimum gap between adaptive events. */
-    COOLDOWN_MS_NORMAL: 7_000,
-    COOLDOWN_MS_DEMO: 2_200,
+    COOLDOWN_MS_NORMAL: 5_500,
+    COOLDOWN_MS_DEMO: 1_600,
+    /** Extra-short cooldown when the player is sprint-rushing right. */
+    SPRINT_COOLDOWN_MS_DEMO: 1_100,
+    SPRINT_COOLDOWN_MS_NORMAL: 3_200,
+    /** Right-bias + low idle = sprint rush (mindless forward play). */
+    SPRINT_RIGHT_RATIO: 0.72,
+    SPRINT_MAX_IDLE: 0.08,
+    /** Min observation before sprint rush can force ADAPT. */
+    SPRINT_FORCE_ADAPT_MS_DEMO: 3_500,
+    SPRINT_FORCE_ADAPT_MS_NORMAL: 18_000,
     /** World segment width for route tracking (px). */
     SEGMENT_SIZE: 128,
     /** Never spawn adaptive hazards closer than this to the player. */
     MIN_SPAWN_DISTANCE: 150,
     /** Warning time before an adaptive hazard becomes deadly. */
-    TELEGRAPH_MS: 750,
+    TELEGRAPH_MS: 700,
   },
 
   TILE: 32,

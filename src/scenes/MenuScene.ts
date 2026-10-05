@@ -20,7 +20,7 @@ export class MenuScene extends Phaser.Scene {
   private inputReady = false;
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private enterKey!: Phaser.Input.Keyboard.Key;
-  private leaderboardKey!: Phaser.Input.Keyboard.Key;
+  private tabKey!: Phaser.Input.Keyboard.Key;
   private muteKey!: Phaser.Input.Keyboard.Key;
 
   private username = '';
@@ -140,13 +140,20 @@ export class MenuScene extends Phaser.Scene {
     });
 
     this.add
-      .text(WIDTH / 2, HEIGHT - 58, 'TYPE NAME   ·   ENTER start   ·   L board   ·   N mute', {
+      .text(WIDTH / 2, HEIGHT - 58, 'TYPE NAME   ·   ENTER start   ·   TAB board   ·   F8 mute', {
         fontFamily: FONT,
         fontSize: '13px',
         color: COLORS.UI_DIM,
       })
       .setOrigin(0.5)
       .setDepth(5);
+
+    // Clickable shortcuts — letters stay free for the callsign.
+    this.makeLinkButton(WIDTH / 2 - 90, HEIGHT - 88, 'LEADERBOARD', () => this.openLeaderboard());
+    this.makeLinkButton(WIDTH / 2 + 100, HEIGHT - 88, 'MUTE', () => {
+      SoundFX.toggleMute();
+      SoundFX.ui();
+    });
 
     if (GAME_CONFIG.DEMO_MODE) {
       this.add
@@ -164,8 +171,8 @@ export class MenuScene extends Phaser.Scene {
     if (!kb) throw new Error('Keyboard input is unavailable');
     this.spaceKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.enterKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    this.leaderboardKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.L);
-    this.muteKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.N);
+    this.tabKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
+    this.muteKey = kb.addKey(Phaser.Input.Keyboard.KeyCodes.F8);
 
     kb.on('keydown', (event: KeyboardEvent) => this.onKey(event));
 
@@ -196,7 +203,7 @@ export class MenuScene extends Phaser.Scene {
       return;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.leaderboardKey)) {
+    if (Phaser.Input.Keyboard.JustDown(this.tabKey)) {
       this.openLeaderboard();
       return;
     }
@@ -212,6 +219,12 @@ export class MenuScene extends Phaser.Scene {
   private onKey(event: KeyboardEvent): void {
     if (!this.inputReady || this.starting) return;
 
+    // Don't steal Tab from the browser/Phaser shortcut handler above.
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      return;
+    }
+
     if (event.key === 'Backspace') {
       event.preventDefault();
       this.username = this.username.slice(0, -1);
@@ -221,11 +234,9 @@ export class MenuScene extends Phaser.Scene {
       return;
     }
 
+    // Every valid name character types in — including L, N, etc.
     if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
       if (event.key === ' ') return;
-      // L opens leaderboard once a valid callsign exists.
-      if (event.key.toLowerCase() === 'l' && isValidUsername(this.username)) return;
-      if (event.key.toLowerCase() === 'n') return;
 
       const next = sanitizeUsername(this.username + event.key);
       if (next.length <= USERNAME_RULES.MAX_LEN && /^[A-Za-z0-9_\-]*$/.test(next)) {
@@ -235,6 +246,24 @@ export class MenuScene extends Phaser.Scene {
         this.refreshPrompt();
       }
     }
+  }
+
+  private makeLinkButton(x: number, y: number, label: string, onClick: () => void): void {
+    const t = this.add
+      .text(x, y, label, {
+        fontFamily: FONT,
+        fontSize: '13px',
+        color: COLORS.UI_ACCENT,
+      })
+      .setOrigin(0.5)
+      .setDepth(8)
+      .setInteractive({ useHandCursor: true });
+    t.on('pointerover', () => t.setColor(COLORS.UI_TEXT));
+    t.on('pointerout', () => t.setColor(COLORS.UI_ACCENT));
+    t.on('pointerdown', () => {
+      if (!this.inputReady || this.starting) return;
+      onClick();
+    });
   }
 
   private displayName(): string {
@@ -258,10 +287,10 @@ export class MenuScene extends Phaser.Scene {
   private refreshPrompt(): void {
     if (isValidUsername(this.username)) {
       this.promptText.setText('PRESS ENTER TO BEGIN');
-      this.hintText.setText('L  open leaderboard');
+      this.hintText.setText('TAB leaderboard  ·  F8 mute');
     } else {
       this.promptText.setText('TYPE YOUR CALLSIGN TO CONTINUE');
-      this.hintText.setText(`2–${USERNAME_RULES.MAX_LEN} letters, numbers, _ or -`);
+      this.hintText.setText(`2–${USERNAME_RULES.MAX_LEN} letters, numbers, _ or -  (L/N OK)`);
     }
   }
 

@@ -71,14 +71,48 @@ export class AdaptationSystem {
       );
     }
 
+    // Mindless forward sprint — highest priority fair counter.
+    if (profile.sprintRush) {
+      push(
+        'sprint_gate',
+        1.35 + awareness * 0.25,
+        'sprintRush',
+        'AI ADAPTATION DETECTED',
+        'YOU NEVER STOP — PATH DENIED',
+      );
+      push(
+        'timed_hazard',
+        0.95,
+        'sprint timing check',
+        'AI ADAPTATION DETECTED',
+        'TIMING CHECK ON YOUR PATH',
+      );
+      push(
+        'enemy',
+        0.85 + awareness * 0.2,
+        'sprint hunter',
+        'AI ADAPTATION DETECTED',
+        'HUNTER ON YOUR ROUTE',
+      );
+    }
+
     if (profile.rightMovementRatio > 0.65 || prediction.likely === 'RIGHT') {
       push(
         'direction',
-        profile.rightMovementRatio + prediction.RIGHT * 0.5,
+        profile.rightMovementRatio + prediction.RIGHT * 0.5 + (profile.sprintRush ? 0.25 : 0),
         `rightBias=${profile.rightMovementRatio.toFixed(2)}`,
         'AI ADAPTATION DETECTED',
         'COUNTERING RIGHTWARD MOVEMENT',
       );
+      if (profile.rightMovementRatio > 0.8) {
+        push(
+          'route',
+          0.8 + profile.rightMovementRatio * 0.3,
+          'force detour',
+          'AI ADAPTATION DETECTED',
+          'FORCING A DETOUR',
+        );
+      }
     }
 
     if (profile.leftMovementRatio > 0.65 || prediction.likely === 'LEFT') {
@@ -187,7 +221,11 @@ export class AdaptationSystem {
           ? 1
           : facing;
 
-    const ahead = player.x + moveDir * Phaser.Math.Between(180, 260);
+    // Sprint counters spawn further ahead so telegraph finishes before arrival.
+    const lead = ctx.profile.sprintRush
+      ? Phaser.Math.Between(280, 360)
+      : Phaser.Math.Between(180, 260);
+    const ahead = player.x + moveDir * lead;
     const width = ctx.difficulty.spikeWidth(ctx.awareness);
     const enemySpeed = ctx.difficulty.enemySpeed(ctx.awareness);
 
@@ -209,6 +247,8 @@ export class AdaptationSystem {
         return this.spawns.spawnFakeSafePlatform(kind, ahead);
       case 'route':
         return this.spawns.spawnRouteBlock(kind, ahead);
+      case 'sprint_gate':
+        return this.spawns.spawnSprintGate(kind, ahead);
       case 'pressure':
         return this.spawns.spawnPressure(kind);
       case 'enemy':

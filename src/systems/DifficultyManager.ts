@@ -25,8 +25,9 @@ export class DifficultyManager {
 
   /** Soft cap on concurrent live adaptations. */
   maxLiveAdaptations(awareness: number): number {
-    if (awareness >= 0.85) return 4;
-    if (awareness >= 0.6) return 3;
+    if (awareness >= 0.85) return 5;
+    if (awareness >= 0.55) return 4;
+    if (awareness >= 0.35) return 3;
     return 2;
   }
 

@@ -39,8 +39,10 @@ const GROUND: GroundDef[] = [
   { x: 49, w: 12 },
   { x: 64, w: 6 },
   // stepping-stone gap lives between tile 70 and 80
-  { x: 80, w: 20 },
-  { x: 103, w: 16 },
+  { x: 80, w: 18 },
+  // Mid-level skill gate: shorter runways force a deliberate jump (no blind sprint).
+  { x: 101, w: 5 },
+  { x: 109, w: 8 },
   { x: 122, w: 10 },
   { x: 135, w: 14 },
   { x: 152, w: 12 },
@@ -57,8 +59,10 @@ const PLATFORMS: PlatformDef[] = [
   { x: 76, rise: 64, w: 2 },
   { x: 84, rise: 64, w: 3 },
   { x: 89, rise: 128, w: 4 },
-  { x: 108, rise: 64, w: 3 },
-  { x: 113, rise: 128, w: 3 },
+  // Mid-gate high route (safe alternate if ground spikes are dense)
+  { x: 103, rise: 96, w: 2 },
+  { x: 107, rise: 128, w: 2 },
+  { x: 112, rise: 64, w: 3 },
   { x: 155, rise: 64, w: 2 },
   { x: 158, rise: 128, w: 2 },
 ];
@@ -70,7 +74,9 @@ const SPIKES: SpikeDef[] = [
   { x: 59, w: 1 },
   { x: 88, w: 3 },
   { x: 95, w: 2 },
-  { x: 111, w: 2 },
+  // Mid-gate: dense but clearable — rewards timing over pure sprint
+  { x: 102, w: 2 },
+  { x: 112, w: 2 },
   { x: 127, w: 1 },
   { x: 140, w: 2 },
   { x: 144, w: 1 },
