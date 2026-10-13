@@ -63,6 +63,41 @@ Push the image to your registry, then run it on any host (VPS, ECS, Cloud Run, K
 
 **Without Docker:** `npm run build`, then upload `dist/` to Netlify, Vercel, Cloudflare Pages, S3+CloudFront, or any nginx/Apache host.
 
+## Deploy (company PaaS — zip + SQLite)
+
+Shared scores need the Node server in `server/` (Express + better-sqlite3). A zip of `dist/` alone is still playable, but the board stays device-local.
+
+1. On a machine matching the PaaS OS (usually Linux):
+
+```bash
+npm ci
+npm run build
+```
+
+2. Zip the deployable tree (include `node_modules` if the PaaS does not run `npm ci` for you):
+
+```
+package.json
+package-lock.json
+server/
+dist/
+node_modules/   # or run npm ci on the PaaS after upload
+```
+
+3. Set env on the PaaS:
+
+| Variable | Example | Notes |
+|---|---|---|
+| `PORT` | `8080` | Whatever the platform injects |
+| `DATABASE_PATH` | `/data/outplayed.db` | **Persistent volume** — not a temp folder |
+| `HOST` | `0.0.0.0` | Optional |
+
+4. Start command: `npm start` (runs `node server/index.mjs`).
+
+5. Check: `GET /api/leaderboard?diag=1` should return `"persistent": true` and `"store": "sqlite"`.
+
+**Notes:** run `npm ci` on the same OS as production (`better-sqlite3` is native). Prefer a single app instance; SQLite is not ideal for multi-writer replicas.
+
 ## Controls
 
 | Action              | Keys                   |

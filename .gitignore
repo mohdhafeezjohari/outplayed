@@ -1,5 +1,6 @@
 node_modules
 dist
+data
 .env
 .env.*
 !.env.example
@@ -10,3 +11,5 @@ npm-debug.log*
 .idea
 .vscode/*
 !.vscode/extensions.json
+*.db
+*.db-*
