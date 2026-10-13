@@ -45,23 +45,44 @@ vercel          # preview
 vercel --prod   # production
 ```
 
-## Deploy (Docker)
+## Deploy (Docker / GHCR)
 
-This game is a static site (no backend). Production = build `dist/` and serve it.
+The production image runs **Express + SQLite** (`server/`) and serves `dist/`.  
+Shared leaderboard works out of the box (persist `/data`).
 
 ```bash
 # Build & run locally on port 8080
 docker compose up --build -d
 # → http://localhost:8080
+# → http://localhost:8080/api/leaderboard?diag=1
 
 # Or without compose:
-docker build -t the-game-is-watching .
-docker run --rm -p 8080:80 the-game-is-watching
+docker build -t outplayed .
+docker run --rm -p 8080:8080 -v outplayed-data:/data \
+  -e DATABASE_PATH=/data/outplayed.db outplayed
 ```
 
-Push the image to your registry, then run it on any host (VPS, ECS, Cloud Run, Kubernetes, etc.) with port 80 published.
+### Public image (GitHub Container Registry)
 
-**Without Docker:** `npm run build`, then upload `dist/` to Netlify, Vercel, Cloudflare Pages, S3+CloudFront, or any nginx/Apache host.
+Pushes to `main` build and publish:
+
+```text
+ghcr.io/mohdhafeezjohari/outplayed:latest
+```
+
+Pull & run on any host / PaaS that accepts container images:
+
+```bash
+docker pull ghcr.io/mohdhafeezjohari/outplayed:latest
+docker run -d --name outplayed -p 8080:8080 \
+  -v outplayed-data:/data \
+  -e DATABASE_PATH=/data/outplayed.db \
+  ghcr.io/mohdhafeezjohari/outplayed:latest
+```
+
+If the package is still private after the first CI run: GitHub → **Packages** → **outplayed** → **Package settings** → **Change visibility** → **Public**.
+
+**Env:** `PORT` (default `8080`), `DATABASE_PATH` (default `/data/outplayed.db`), `HOST` (default `0.0.0.0`).
 
 ## Deploy (company PaaS — zip + SQLite)
 

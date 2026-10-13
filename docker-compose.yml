@@ -1,7 +1,16 @@
 services:
   game:
     build: .
-    image: the-game-is-watching:latest
+    image: ghcr.io/mohdhafeezjohari/outplayed:latest
     ports:
-      - "8080:80"
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      HOST: "0.0.0.0"
+      DATABASE_PATH: /data/outplayed.db
+    volumes:
+      - outplayed-data:/data
     restart: unless-stopped
+
+volumes:
+  outplayed-data:
